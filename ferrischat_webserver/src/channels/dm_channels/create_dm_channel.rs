@@ -2,6 +2,7 @@ use axum::extract::{Path, Json};
 use ferrischat_macros::get_db_or_fail;
 use ferrischat_common::types::{ModelType, DMChannel};
 use ferrischat_common::request_json::DMChannelCreateJson;
+use sqlx::types::BigDecimal;
 
 
 /// POST `/v0/users/me/channels`
@@ -16,14 +17,16 @@ pub async fn create_dm_channel(
     let channel_id = generate_snowflake::<0>(ModelType::DMChannel as u8, node_id);
     let bigint_channel_id = u128_to_bigdecimal!(channel_id);
 
-    let users = users::split(',').filter_map(str::parse::<u128>).collect();
+    let bigint_authed_user = u128_to_bigdecimal!(auth.0);
+
+    let users = users::split(',').filter_map(str::parse::<BigDecimal>).collect();
     
     if !group && users.len() > 1 {
         return Err(ErrorJson::new_400("Direct DM messages can not contain more than 1 other user. \
          Consider making this a group DM to include more people".to_string()).into());
     }
 
-    users.push(auth.0);
+    users.push(bigint_authed_user);
 
     sqlx::query!(
         "INSERT INTO dmchannels VALUES ($1, $2, $3, $4)",
