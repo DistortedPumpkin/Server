@@ -1,6 +1,6 @@
 use axum::extract::{Path, Json};
 use ferrischat_macros::get_db_or_fail;
-use ferrischat_common::types::{ModelType, DMChannel};
+use ferrischat_common::types::{ModelType, DMChannel, User, UserFlags};
 use ferrischat_common::request_json::DMChannelCreateJson;
 use sqlx::types::BigDecimal;
 
@@ -38,6 +38,25 @@ pub async fn create_dm_channel(
     .execute(db)
     .await?;
 
+    let res_users = sqlx::query!("SELECT * FROM users WHERE id = ANY($1)", users)
+        .fetch_all(db)
+        .await?;
+
+    let mut users = Vec::with_capacity(res_users.len());
+    for u in res_users {
+        users.push(User {
+            id: u.id,
+            name: u.name.clone(),
+            avatar: u.avatar,
+            guilds: None,
+            flags: UserFlags::from_bits_truncate(u.flags),
+            discriminator: u.discriminator,
+            pronouns: u
+                .pronouns
+                .and_then(ferrischat_common::types::Pronouns::from_i16),
+        })
+    }
+    
     let dm_channel_obj = DMChannel {
         id: bigint_channel_id,
         name,
