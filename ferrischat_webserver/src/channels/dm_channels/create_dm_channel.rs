@@ -1,4 +1,4 @@
-use axum::extract::{Path, Json};
+use axum::extract::{Path, Json, Query};
 use ferrischat_macros::get_db_or_fail;
 use ferrischat_common::types::{ModelType, DMChannel, User, UserFlags};
 use ferrischat_common::request_json::{DMChannelCreateJson, CreateDmChannelParams};
