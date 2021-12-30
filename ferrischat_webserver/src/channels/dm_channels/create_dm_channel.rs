@@ -9,7 +9,7 @@ use sqlx::types::BigDecimal;
 pub async fn create_dm_channel(
     auth: crate::Authorization,
     Json(DMChannelCreateJson { group, name }): Json<DMChannelCreateJson>,
-    Query(CreateDmChannelParams{ users }): Query<CreateDmChannelParams>,
+    Query(CreateDmChannelParams { users }): Query<CreateDmChannelParams>,
 ) -> Result<Json<DMChannel>, WebServerError> {
     let db = get_db_or_fail!();
 
