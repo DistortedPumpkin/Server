@@ -1,7 +1,7 @@
 use axum::extract::{Path, Json};
 use ferrischat_macros::get_db_or_fail;
 use ferrischat_common::types::{ModelType, DMChannel, User, UserFlags};
-use ferrischat_common::request_json::DMChannelCreateJson;
+use ferrischat_common::request_json::{DMChannelCreateJson, CreateDmChannelParams};
 use sqlx::types::BigDecimal;
 
 
@@ -9,7 +9,7 @@ use sqlx::types::BigDecimal;
 pub async fn create_dm_channel(
     auth: crate::Authorization,
     Json(DMChannelCreateJson { group, name }): Json<DMChannelCreateJson>,
-    Path(users): Path<String>,
+    Query(CreateDmChannelParams{ users }): Query<CreateDmChannelParams>,
 ) -> Result<Json<DMChannel>, WebServerError> {
     let db = get_db_or_fail!();
 
