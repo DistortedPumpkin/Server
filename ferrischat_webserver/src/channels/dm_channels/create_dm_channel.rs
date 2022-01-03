@@ -21,9 +21,14 @@ pub async fn create_dm_channel(
 
     let users = users::split(',').filter_map(str::parse::<BigDecimal>).collect();
     
-    if !group && users.len() > 1 {
-        return Err(ErrorJson::new_400("Direct DM messages can not contain more than 1 other user. \
+    if !group && (users.len() > 1 || users.len() == 0) {
+        return Err(ErrorJson::new_400("Direct DM messages must contain one other user. \
         Consider making this a group DM to include more people".to_string()).into());
+    }
+
+    if bigint_authed_user in users {
+        return Err(ErrorJson::new_400("You can not add yourself to a private channel; \
+        you are added automatically.".to_string()).into());
     }
 
     users.push(bigint_authed_user);
