@@ -68,7 +68,7 @@ pub async fn create_dm_channel(
     
     let dm_channel_obj = DMChannel {
         id: bigint_channel_id,
-        name,
+        name: name.clone(),
         users,
         group,
     };
