@@ -1,5 +1,5 @@
 use ferrischat_common::types::{User, DMChannel, UserFlags};
-use axum::extract::{Path, Json, Query};
+use axum::extract::{Json, Query};
 use std::collections::HashMap;
 use ferrischat_common::request_json::GetSelfDmChannelParams;
 
@@ -58,7 +58,7 @@ pub async fn get_self_dm_channels(
                     pronouns: dm
                         .user_pronouns
                         .and_then(ferrischat_common::types::Pronouns::from_i16),
-                })
+                });
             }
         }
     }
