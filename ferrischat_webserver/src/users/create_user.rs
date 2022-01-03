@@ -19,11 +19,7 @@ pub async fn create_user(
         password,
         pronouns,
     } = user_data.0;
-    if username.contains(char::is_whitespace) {
-        return Err(
-            ErrorJson::new_400("Your username may not contain a whitespace!".to_string()).into(),
-        );
-    }
+
     // Gets a discriminator for the user
     let user_discrim = {
         // Makes sure the name doesn't already exist
@@ -48,11 +44,11 @@ pub async fn create_user(
     let hashed_password = ferrischat_auth::hash(&password).await?;
 
     let db_pronouns = pronouns.map(|p| p as i16);
-    let bigint_user_id = u128_to_bigdecimal!(user_id);
+    let bigdecimal_user_id = u128_to_bigdecimal!(user_id);
     // tell the database about our new user
     sqlx::query!(
         "INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, false, $7)",
-        bigint_user_id,
+        bigdecimal_user_id,
         username,
         0,
         email,

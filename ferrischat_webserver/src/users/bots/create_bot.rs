@@ -15,13 +15,8 @@ pub async fn create_bot(
     if is_bot {
         return Err(ErrorJson::new_403("Bots cannot create/own bots!".to_string()).into());
     }
-    if username.contains(char::is_whitespace) {
-        return Err(
-            ErrorJson::new_400("A username may not contain a whitespace!".to_string()).into(),
-        );
-    }
     let db = get_db_or_fail!();
-    let bigint_owner_id = u128_to_bigdecimal!(owner_id);
+    let bigdecimal_owner_id = u128_to_bigdecimal!(owner_id);
     let node_id = get_node_id!();
     let user_id = generate_snowflake::<0>(ModelType::Bot as u8, node_id);
     let email = format!("{}@bots.ferris.chat", user_id);
@@ -52,11 +47,11 @@ pub async fn create_bot(
             })?
     };
     let hashed_password = ferrischat_auth::hash(password).await?;
-    let bigint_bot_id = u128_to_bigdecimal!(user_id);
+    let bigdecimal_bot_id = u128_to_bigdecimal!(user_id);
 
     sqlx::query!(
         "INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6)",
-        bigint_bot_id,
+        bigdecimal_bot_id,
         username,
         UserFlags::BOT_ACCOUNT.bits(),
         email,
@@ -68,8 +63,8 @@ pub async fn create_bot(
 
     sqlx::query!(
         "INSERT INTO bots VALUES ($1, $2)",
-        bigint_bot_id,
-        bigint_owner_id
+        bigdecimal_bot_id,
+        bigdecimal_owner_id
     )
     .execute(db)
     .await?;
@@ -83,7 +78,7 @@ pub async fn create_bot(
             flags: UserFlags::BOT_ACCOUNT,
             discriminator: user_discrim,
             pronouns: None,
-            is_bot,
+            is_bot: true,
         },
         code: 201,
     })
