@@ -10,12 +10,15 @@ pub async fn delete_guild(
     crate::Authorization(auth_user, ..): crate::Authorization,
 ) -> Result<http::StatusCode, WebServerError> {
     let db = get_db_or_fail!();
-    let bigint_guild_id = u128_to_bigdecimal!(guild_id);
+    let bigdecimal_guild_id = u128_to_bigdecimal!(guild_id);
 
-    let x = sqlx::query!("SELECT owner_id FROM guilds WHERE id = $1", bigint_guild_id)
-        .fetch_optional(db)
-        .await?
-        .ok_or_else(|| ErrorJson::new_404(format!("Unknown guild with ID {}", guild_id)))?;
+    let x = sqlx::query!(
+        "SELECT owner_id FROM guilds WHERE id = $1",
+        bigdecimal_guild_id
+    )
+    .fetch_optional(db)
+    .await?
+    .ok_or_else(|| ErrorJson::new_404(format!("Unknown guild with ID {}", guild_id)))?;
     let owner_id = bigdecimal_to_u128!(x.owner_id);
     if auth_user != owner_id {
         return Err(ErrorJson::new_403("Forbidden".to_string()).into());
@@ -23,7 +26,7 @@ pub async fn delete_guild(
 
     let guild_resp = sqlx::query!(
         "DELETE FROM guilds WHERE id = $1 RETURNING *",
-        bigint_guild_id,
+        bigdecimal_guild_id,
     )
     .fetch_one(db)
     .await?;
