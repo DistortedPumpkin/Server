@@ -12,21 +12,24 @@ pub async fn get_dm_channel(
     let bigint_channel_id = u128_to_bigdecimal!(channel_id);
 
     let res_dm_channel = sqlx::query!(r"#
-        SELECT
+        SELECT 
             c.*, 
-            u.id AS user_id, 
-            u.name AS user_name, 
-            u.avatar AS user_avatar, 
-            u.discriminator AS user_discriminator, 
-            u.flags AS user_flags, 
-            u.pronouns AS user_pronouns
+            ARRAY(
+                SELECT ARRAY[
+                    CAST(id AS VARCHAR(39)), 
+                    name, 
+                    avatar, 
+                    CAST(flags AS VARCHAR(39)), 
+                    CAST(discriminator AS VARCHAR(39)),
+                    CAST(pronouns AS VARCHAR(39))
+                ] AS u
+                FROM users 
+                WHERE id IN (
+                    SELECT user_id FROM dmmembers WHERE dm_id = c.id
+                )
+            ) AS _users
         FROM 
             dmchannels c
-        LEFT JOIN users u 
-        ON u.id IN (
-            SELECT user_id FROM dmmembers 
-            WHERE dm_id = c.id
-        )
         WHERE c.id = $1 AND EXISTS (
             SELECT * FROM dmmembers 
             WHERE user_id = $2 AND dm_id = c.id
@@ -35,39 +38,40 @@ pub async fn get_dm_channel(
         bigint_channel_id,
         bigint_authed_user
     )
-    .fetch_all(db)
+    .fetch_optional(db)
     .await?;
 
-    if res_dm_channel.len() == 0 {
-        return Err(ErrorJson::new_404(format!("Unknown private channel with ID {}", channel_id)).into());
+    match res_dm_channel {
+        None => {
+            return Err(ErrorJson::new_404(format!("Unknown private channel with ID {}", channel_id)).into());
+        },
+        Some(channel) => {
+            let mut users = Vec::with_capacity(res_dm_channel.len());
+
+            for user in channel._users {
+                users.push(User {
+                    id: str::parse::<u128>(user[0]),
+                    name: users[1].clone(),
+                    avatar: users[2].clone(),
+                    guilds: None,
+                    flags: UserFlags::from_bits_truncate(str::parse::<i64>(users[3])),
+                    discriminator: str::parse::<i16>(users[4]),
+                    pronouns: str::parse::<i16>(users[5])
+                        .and_then(ferrischat_common::types::Pronouns::from_i16),
+                });
+            }
+
+            let dm_channel_obj = DMChannel {
+                id: channel_id,
+                name: channel.name.clone(),
+                users,
+                group: channel.is_group,
+            }
+            
+            return Ok(crate::Json {
+                obj: dm_channel_obj,
+                code: 200,
+            })
+        }
     }
-
-    let mut users = Vec::with_capacity(res_dm_channel.len());
-
-    for dm in res_dm_channel {
-        users.push(User {
-            id: bigdecimal_to_u128!(dm.user_id),
-            name: dm.user_name.clone(),
-            avatar: dm.user_avatar,
-            guilds: None,
-            flags: UserFlags::from_bits_truncate(dm.user_flags),
-            discriminator: dm.user_discriminator,
-            pronouns: dm
-                .user_pronouns
-                .and_then(ferrischat_common::types::Pronouns::from_i16),
-        });
-    }
-
-    let dm_channel_obj = DMChannel {
-        id: channel_id,
-        name: res_dm_channel[0].name.clone(),
-        users,
-        group: res_dm_channel[0].is_group,
-    }
-
-    Ok(crate::Json {
-        obj: dm_channel_obj,
-        code: 200,
-    })
-    
 }
